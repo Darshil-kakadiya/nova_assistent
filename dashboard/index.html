@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS — Command Center</title>
+  <style>
+    :root {
+      --primary: #00d4ff;
+      --secondary: #0077ff;
+      --bg: #020b18;
+      --surface: #061525;
+      --surface2: #0a2035;
+      --text: #e0f4ff;
+      --muted: #4a7fa0;
+      --green: #00ff88;
+      --red: #ff4466;
+      --yellow: #ffcc00;
+      --border: rgba(0, 212, 255, 0.2);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, var(--surface), var(--surface2));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo { display: flex; align-items: center; gap: 14px; }
+
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 20px rgba(0,212,255,0.4);
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px rgba(0,212,255,0.3); }
+      to   { box-shadow: 0 0 30px rgba(0,212,255,0.7); }
+    }
+
+    .logo-text h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); letter-spacing: 3px; }
+    .logo-text p  { font-size: 0.72rem; color: var(--muted); letter-spacing: 1px; }
+
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      background: rgba(0,255,136,0.1);
+      border: 1px solid rgba(0,255,136,0.3);
+      border-radius: 50px;
+      font-size: 0.8rem; color: var(--green);
+    }
+
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Grid layout ── */
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+
+    .col-3  { grid-column: span 3; }
+    .col-4  { grid-column: span 4; }
+    .col-5  { grid-column: span 5; }
+    .col-6  { grid-column: span 6; }
+    .col-7  { grid-column: span 7; }
+    .col-8  { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    @media (max-width: 900px) {
+      .col-3, .col-4, .col-5, .col-6, .col-7, .col-8 { grid-column: span 12; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: linear-gradient(135deg, var(--surface), var(--surface2));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Stat cards ── */
+    .stat { display: flex; flex-direction: column; gap: 4px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); line-height: 1; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── Progress bar ── */
+    .progress-wrap { margin-bottom: 12px; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px; }
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+    .fill-blue   { background: linear-gradient(90deg, var(--secondary), var(--primary)); }
+    .fill-green  { background: linear-gradient(90deg, #00cc66, var(--green)); }
+    .fill-yellow { background: linear-gradient(90deg, #cc8800, var(--yellow)); }
+    .fill-red    { background: linear-gradient(90deg, #cc0033, var(--red)); }
+
+    /* ── Agent grid ── */
+    .agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+
+    .agent-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .agent-card:hover {
+      background: rgba(0,212,255,0.08);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .agent-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .agent-name { font-size: 0.72rem; font-weight: 600; color: var(--primary); }
+    .agent-role { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+    .agent-status { font-size: 0.6rem; color: var(--green); margin-top: 4px; }
+
+    /* ── Chat panel ── */
+    .chat-box {
+      height: 300px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .msg {
+      display: flex; gap: 10px; align-items: flex-start;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .msg.user  { flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+
+    .user .msg-avatar  { background: rgba(0,119,255,0.3); }
+    .bot  .msg-avatar  { background: rgba(0,212,255,0.2); }
+
+    .msg-bubble {
+      max-width: 75%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .user .msg-bubble { background: rgba(0,119,255,0.25); border: 1px solid rgba(0,119,255,0.3); }
+    .bot  .msg-bubble { background: rgba(0,212,255,0.1);  border: 1px solid var(--border); }
+
+    /* ── Input ── */
+    .chat-input-row {
+      display: flex; gap: 10px; margin-top: 14px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus { border-color: var(--primary); }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--secondary), var(--primary));
+      color: #fff;
+    }
+
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── Waveform ── */
+    .waveform {
+      display: flex; align-items: center; gap: 3px;
+      height: 40px;
+    }
+
+    .wave-bar {
+      width: 3px;
+      background: var(--primary);
+      border-radius: 2px;
+      animation: wave 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes wave {
+      0%   { height: 4px; }
+      100% { height: 32px; }
+    }
+
+    /* ── Log ── */
+    .log-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+    .log-item { display: flex; gap: 10px; align-items: flex-start; font-size: 0.75rem; }
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-msg  { color: var(--text); }
+    .log-ok   .log-msg { color: var(--green); }
+    .log-warn .log-msg { color: var(--yellow); }
+    .log-err  .log-msg { color: var(--red); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🤖</div>
+      <div class="logo-text">
+        <h1>JARVIS</h1>
+        <p>Just A Rather Very Intelligent System</p>
+      </div>
+    </div>
+    <div class="status-badge"><div class="dot"></div> ONLINE</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- Uptime -->
+    <div class="card col-4">
+      <div class="card-title">⏱ Uptime</div>
+      <div class="stat">
+        <div class="stat-value" id="uptime">0m</div>
+        <div class="stat-label">System running</div>
+      </div>
+    </div>
+
+    <!-- Commands -->
+    <div class="card col-4">
+      <div class="card-title">💬 Commands</div>
+      <div class="stat">
+        <div class="stat-value" id="cmd-count">0</div>
+        <div class="stat-label">Processed today</div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="card col-4">
+      <div class="card-title">⚡ Status</div>
+      <div class="stat">
+        <div class="stat-value" style="color:var(--green)">OK</div>
+        <div class="stat-label">All systems nominal</div>
+      </div>
+    </div>
+
+    <!-- System Resources -->
+    <div class="card col-4">
+      <div class="card-title">📊 System Resources</div>
+
+      <div class="progress-wrap">
+        <div class="progress-header"><span>CPU</span><span id="cpu-val">--</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-blue" id="cpu-bar" style="width:0%"></div></div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-header"><span>RAM</span><span id="ram-val">--</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-green" id="ram-bar" style="width:0%"></div></div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-header"><span>Battery</span><span id="bat-val">--</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-yellow" id="bat-bar" style="width:80%"></div></div>
+      </div>
+    </div>
+
+    <!-- Voice Waveform -->
+    <div class="card col-4">
+      <div class="card-title">🎤 Voice Activity</div>
+      <div class="waveform" id="waveform"></div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:12px;" id="voice-status">
+        Listening for commands...
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card col-4">
+      <div class="card-title">⚡ Quick Actions</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn btn-outline" onclick="sendCmd('screenshot')">📸 Screenshot</button>
+        <button class="btn btn-outline" onclick="sendCmd('volume up')">🔊 Vol +</button>
+        <button class="btn btn-outline" onclick="sendCmd('volume down')">🔉 Vol -</button>
+        <button class="btn btn-outline" onclick="sendCmd('mute')">🔇 Mute</button>
+        <button class="btn btn-outline" onclick="sendCmd('status')">📊 Status</button>
+        <button class="btn btn-outline" onclick="sendCmd('today summary')">📅 Today</button>
+        <button class="btn btn-outline" onclick="sendCmd('open chrome')">🌐 Chrome</button>
+        <button class="btn btn-outline" onclick="sendCmd('diagnostics')">🔬 Diag</button>
+      </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="card col-12">
+      <div class="card-title">💬 Command Interface</div>
+      <div class="chat-box" id="chat-box">
+        <div class="msg bot">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-bubble">JARVIS online. All systems operational. How may I assist you?</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" type="text"
+               placeholder="Type a command or ask anything..."
+               onkeydown="if(event.key==='Enter') sendMsg()" />
+        <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card col-12">
+      <div class="card-title">📋 Activity Log</div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+  </div>
+
+  <footer>JARVIS AI Assistant v1.0.0 — Powered by Node.js · API: <span id="api-url">http://localhost:3000</span></footer>
+</div>
+
+<script>
+  const API = 'http://localhost:3000';
+  let cmdCount = 0;
+  let startTime = Date.now();
+
+  // Agents roster removed
+
+  // ── Waveform ─────────────────────────────────────────────────────
+  function buildWaveform() {
+    const wf = document.getElementById('waveform');
+    wf.innerHTML = '';
+    for (let i = 0; i < 30; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'wave-bar';
+      bar.style.animationDelay = `${(i * 0.05).toFixed(2)}s`;
+      bar.style.animationDuration = `${(0.6 + Math.random() * 0.6).toFixed(2)}s`;
+      wf.appendChild(bar);
+    }
+  }
+
+  // ── Chat ─────────────────────────────────────────────────────────
+  function addMsg(text, role = 'bot') {
+    const box = document.getElementById('chat-box');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `
+      <div class="msg-avatar">${role === 'user' ? '🧑' : '🤖'}</div>
+      <div class="msg-bubble">${text}</div>
+    `;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addMsg(text, 'user');
+    addLog('Command: ' + text, 'ok');
+    cmdCount++;
+    document.getElementById('cmd-count').textContent = cmdCount;
+
+    try {
+      const res = await fetch(`${API}/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: text })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        addMsg(`[${data.agent}] ${data.response}`, 'bot');
+        addLog(`Agent ${data.agent} responded`, 'ok');
+      } else {
+        addMsg('JARVIS API not reachable. Start JARVIS first with npm start, then open this dashboard.', 'bot');
+        addLog('API not reachable', 'warn');
+      }
+    } catch {
+      // Simulate response when API is offline
+      addMsg(simulateResponse(text), 'bot');
+    }
+  }
+
+  function sendCmd(cmd) {
+    document.getElementById('chat-input').value = cmd;
+    sendMsg();
+  }
+
+  function simulateResponse(cmd) {
+    const c = cmd.toLowerCase();
+    if (c.includes('hello') || c.includes('hi')) return 'Good day! How may I assist you?';
+    if (c.includes('screenshot')) return '📸 Screenshot command queued. JARVIS will capture when connected.';
+    if (c.includes('status')) return '⚡ JARVIS Status: Online · 15 agents active · All systems nominal.';
+    if (c.includes('volume')) return '🔊 Volume command acknowledged.';
+    if (c.includes('chrome')) return '🌐 Launching Chrome...';
+    if (c.includes('music') || c.includes('play')) return '🎵 Jerome Agent: Music control ready.';
+    if (c.includes('code') || c.includes('debug')) return '💻 Steve Agent: Ready to assist with coding.';
+    return `Processing: "${cmd}" — Connect JARVIS (npm start) for live responses.`;
+  }
+
+  // ── Log ──────────────────────────────────────────────────────────
+  function addLog(msg, type = '') {
+    const list = document.getElementById('log-list');
+    const time = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = `log-item log-${type}`;
+    div.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${msg}</span>`;
+    list.prepend(div);
+    if (list.children.length > 50) list.lastElementChild.remove();
+  }
+
+  // ── Uptime counter ────────────────────────────────────────────────
+  function updateUptime() {
+    const sec = Math.floor((Date.now() - startTime) / 1000);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    document.getElementById('uptime').textContent =
+      h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  // ── Simulated resource bars ───────────────────────────────────────
+  function updateResources() {
+    const cpu = 20 + Math.round(Math.random() * 30);
+    const ram = 45 + Math.round(Math.random() * 20);
+    const bat = 78;
+
+    document.getElementById('cpu-val').textContent = cpu + '%';
+    document.getElementById('cpu-bar').style.width = cpu + '%';
+    document.getElementById('ram-val').textContent = ram + '%';
+    document.getElementById('ram-bar').style.width = ram + '%';
+    document.getElementById('bat-val').textContent = bat + '%';
+    document.getElementById('bat-bar').style.width = bat + '%';
+  }
+
+  // ── Try to fetch real stats from API ─────────────────────────────
+  async function fetchStatus() {
+    try {
+      const res = await fetch(`${API}/status`);
+      if (res.ok) {
+        addLog('Connected to JARVIS API ✅', 'ok');
+      }
+    } catch {
+      // API offline — dashboard still works in demo mode
+    }
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────
+  buildWaveform();
+  fetchStatus();
+  updateResources();
+  addLog('Dashboard initialized', 'ok');
+  addLog('JARVIS Command Center loaded', 'ok');
+
+  setInterval(updateUptime, 1000);
+  setInterval(updateResources, 5000);
+  setInterval(fetchStatus, 30000);
+</script>
+</body>
+</html>
